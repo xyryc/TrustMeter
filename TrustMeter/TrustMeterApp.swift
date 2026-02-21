@@ -11,7 +11,7 @@ import SwiftUI
 struct TrustMeterApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            AnalyzerView()
         }
     }
 }
