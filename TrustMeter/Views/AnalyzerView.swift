@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AnalyzerView: View {
     @State private var productURLText = ""
-    
+    @State private var showResult = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16){
@@ -22,8 +22,18 @@ struct AnalyzerView: View {
                 .autocorrectionDisabled(true)
                 .keyboardType(.URL)
                 .textFieldStyle(.roundedBorder)
+            
+            Button("Analyze"){
+                showResult = true
+            }
+            .buttonStyle(.borderedProminent)
+            
+            Spacer()
         }
         .padding()
+        .navigationDestination(isPresented: $showResult){
+            ResultView(totalScore: 10, priceScore: 20, metaDataScore: 30, completenessScore: 40, trustScore: 50)
+        }
         .overlay(RoundedRectangle(cornerRadius: 12)
             .stroke(.red, lineWidth: 1)
         )

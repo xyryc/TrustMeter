@@ -11,7 +11,9 @@ import SwiftUI
 struct TrustMeterApp: App {
     var body: some Scene {
         WindowGroup {
-            AnalyzerView()
+            NavigationStack {
+                AnalyzerView()
+            }
         }
     }
 }
