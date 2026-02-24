@@ -27,16 +27,12 @@ struct AnalyzerView: View {
                 showResult = true
             }
             .buttonStyle(.borderedProminent)
-            
             Spacer()
         }
         .padding()
         .navigationDestination(isPresented: $showResult){
             ResultView(totalScore: 10, priceScore: 20, metaDataScore: 30, completenessScore: 40, trustScore: 50)
         }
-        .overlay(RoundedRectangle(cornerRadius: 12)
-            .stroke(.red, lineWidth: 1)
-        )
     }
 }
 
