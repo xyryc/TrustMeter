@@ -19,41 +19,123 @@ struct AnalyzerView: View {
         "Scanning metadata",
         "Calculating trust signals"
     ]
+    private let trustChecks = [
+        ("tag", "Price consistency"),
+        ("doc.text.magnifyingglass", "Metadata quality"),
+        ("checkmark.shield", "Trust signals")
+    ]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Trust Meter")
-                .font(.largeTitle.bold())
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                heroSection
+                inputCard
+                checksCard
 
-            Text("Paste a product url to analyze.")
-                .foregroundStyle(.secondary)
+                if isAnalyzing {
+                    analyzingCard
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding()
+        }
+        .background {
+            Rectangle()
+                .fill(backgroundGradient)
+                .ignoresSafeArea()
+        }
+        .animation(.easeInOut(duration: 0.25), value: isAnalyzing)
+        .navigationDestination(isPresented: $showResult) {
+            ResultView(result: dummyResult)
+        }
+    }
+
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Trust Meter")
+                        .font(.largeTitle.bold())
+
+                    Text("Inspect any product page and get a fast trust score before you buy.")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(.blue.opacity(0.12))
+                        .frame(width: 68, height: 68)
+
+                    Image(systemName: "viewfinder")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundStyle(.blue)
+                }
+            }
+
+            HStack(spacing: 10) {
+                quickStat(title: "3 checks", subtitle: "core signals")
+                quickStat(title: "Fast", subtitle: "instant preview")
+            }
+        }
+    }
+
+    private var inputCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Label("Product URL", systemImage: "link")
+                .font(.headline)
 
             TextField("http://example.com/product", text: $productURLText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)
                 .keyboardType(.URL)
-                .textFieldStyle(.roundedBorder)
                 .disabled(isAnalyzing)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             Button(action: startAnalysis) {
-                Text(isAnalyzing ? "Analyzing..." : "Analyze")
-                    .frame(maxWidth: .infinity)
+                HStack {
+                    Image(systemName: isAnalyzing ? "hourglass" : "viewfinder.circle.fill")
+                    Text(isAnalyzing ? "Analyzing..." : "Analyze Product")
+                }
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(isAnalyzing || productURLText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .buttonStyle(.plain)
+            .foregroundStyle(.white)
+            .background(buttonBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .disabled(isAnalyzing || trimmedURL.isEmpty)
+            .opacity(isAnalyzing || trimmedURL.isEmpty ? 0.65 : 1)
+        }
+        .cardStyle()
+    }
 
-            if isAnalyzing {
-                analyzingCard
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+    private var checksCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("What we inspect")
+                .font(.headline)
+
+            ForEach(trustChecks, id: \.1) { check in
+                HStack(spacing: 12) {
+                    Image(systemName: check.0)
+                        .frame(width: 28, height: 28)
+                        .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .foregroundStyle(Color.accentColor)
+
+                    Text(check.1)
+                        .font(.subheadline.weight(.medium))
+
+                    Spacer()
+                }
             }
-
-            Spacer()
         }
-        .padding()
-        .animation(.easeInOut(duration: 0.25), value: isAnalyzing)
-        .navigationDestination(isPresented: $showResult) {
-            ResultView(result: dummyResult)
-        }
+        .cardStyle()
     }
 
     private var analyzingCard: some View {
@@ -87,6 +169,26 @@ struct AnalyzerView: View {
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private var backgroundGradient: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color.blue.opacity(0.12),
+                Color.clear,
+                Color.indigo.opacity(0.08)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var buttonBackground: LinearGradient {
+        LinearGradient(
+            colors: [Color.blue, Color.indigo],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
     }
 
     private var scanningIndicator: some View {
@@ -168,6 +270,24 @@ struct AnalyzerView: View {
         }
 
         return Color(.systemGray4)
+    }
+
+    private var trimmedURL: String {
+        productURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func quickStat(title: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.headline)
+
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func startAnalysis() {
