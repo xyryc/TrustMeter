@@ -11,17 +11,20 @@ struct ScoreBarRow: View {
     let title: String
     let score: Int
     let tint: Color
+    var hidesHeader: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
+            if !hidesHeader {
+                HStack {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
 
-                Spacer()
+                    Spacer()
 
-                Text("\(score)/25")
-                    .foregroundStyle(.secondary)
+                    Text("\(score)/25")
+                        .foregroundStyle(.secondary)
+                }
             }
 
             GeometryReader { proxy in

@@ -134,13 +134,44 @@ struct ResultView: View {
     }
 
     private var breakdownCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 16) {
             SectionTitle(title: "Score Breakdown", icon: "chart.bar.fill")
 
-            ScoreBarRow(title: "Price", score: result.scoreBreakdown.priceScore, tint: .blue)
-            ScoreBarRow(title: "Metadata", score: result.scoreBreakdown.metadataScore, tint: .indigo)
-            ScoreBarRow(title: "Completeness", score: result.scoreBreakdown.completenessScore, tint: .teal)
-            ScoreBarRow(title: "Trust", score: result.scoreBreakdown.trustScore, tint: .green)
+            Text("Each category measures a different part of page quality instead of reusing the same signals.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            BreakdownMetricView(
+                title: "Pricing Integrity",
+                icon: "tag.fill",
+                score: result.scoreBreakdown.priceScore,
+                summary: result.scoreBreakdown.priceSummary,
+                tint: .blue
+            )
+
+            BreakdownMetricView(
+                title: "Metadata Quality",
+                icon: "doc.text.magnifyingglass",
+                score: result.scoreBreakdown.metadataScore,
+                summary: result.scoreBreakdown.metadataSummary,
+                tint: .indigo
+            )
+
+            BreakdownMetricView(
+                title: "Product Completeness",
+                icon: "square.grid.2x2.fill",
+                score: result.scoreBreakdown.completenessScore,
+                summary: result.scoreBreakdown.completenessSummary,
+                tint: .teal
+            )
+
+            BreakdownMetricView(
+                title: "Store & Technical Trust",
+                icon: "checkmark.shield.fill",
+                score: result.scoreBreakdown.trustScore,
+                summary: result.scoreBreakdown.trustSummary,
+                tint: .green
+            )
         }
         .cardStyle()
     }
@@ -242,6 +273,44 @@ private struct ConfidenceBadgeView: View {
         default:
             return .red
         }
+    }
+}
+
+private struct BreakdownMetricView: View {
+    let title: String
+    let icon: String
+    let score: Int
+    let summary: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: icon)
+                    .frame(width: 34, height: 34)
+                    .background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .foregroundStyle(tint)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+
+                    Text(summary)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text("\(score)/25")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(tint)
+            }
+
+            ScoreBarRow(title: "", score: score, tint: tint, hidesHeader: true)
+        }
+        .padding(14)
+        .background(Color(.tertiarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 

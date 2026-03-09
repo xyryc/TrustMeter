@@ -22,6 +22,10 @@ struct TrustScorer {
             metadataScore: metadataScore,
             completenessScore: completenessScore,
             trustScore: trustScore,
+            priceSummary: priceSummary(from: productData),
+            metadataSummary: metadataSummary(from: productData),
+            completenessSummary: completenessSummary(from: productData),
+            trustSummary: trustSummary(from: productData, pageURL: pageURL),
             totalScore: totalScore,
             ratingLabel: ratingLabel(for: totalScore),
             confidenceScore: confidenceScore,
@@ -185,6 +189,63 @@ struct TrustScorer {
         default:
             return "Low Confidence"
         }
+    }
+
+    private func priceSummary(from productData: ProductData) -> String {
+        if productData.price != nil, productData.currency != nil, productData.hasJSONLDOfferPrice {
+            return "Price, currency, and structured offer data were all found."
+        }
+
+        if productData.price != nil, productData.currency != nil {
+            return "Price and currency were found, but pricing support is partial."
+        }
+
+        if productData.price != nil {
+            return "A price was detected, but currency or offer details are weak."
+        }
+
+        return "Pricing evidence is limited, which lowers confidence in the listing."
+    }
+
+    private func metadataSummary(from productData: ProductData) -> String {
+        if hasMatchingTitles(productData), hasMatchingDescriptions(productData), productData.ogImage != nil {
+            return "Titles and descriptions are consistent across metadata sources."
+        }
+
+        if productData.title != nil, productData.metaDescription != nil {
+            return "Basic metadata is present, though coverage or consistency is incomplete."
+        }
+
+        return "Metadata coverage is weak, so page context is harder to verify."
+    }
+
+    private func completenessSummary(from productData: ProductData) -> String {
+        if productData.productDescription != nil,
+           productData.imageURL != nil,
+           productData.availability != nil,
+           productData.siteName != nil {
+            return "The page includes the main product details expected on a product listing."
+        }
+
+        if productData.productDescription != nil || productData.imageURL != nil {
+            return "Some core product details were found, but the page is not fully complete."
+        }
+
+        return "Important product details are missing or too sparse for a strong result."
+    }
+
+    private func trustSummary(from productData: ProductData, pageURL: URL) -> String {
+        if pageURL.scheme?.lowercased() == "https",
+           productData.hasJSONLDProduct,
+           hasRecognizableStoreIdentity(productData) {
+            return "The page shows strong technical and store-level trust signals."
+        }
+
+        if pageURL.scheme?.lowercased() == "https" || productData.hasJSONLDProduct {
+            return "Some trust signals are present, but verification is not complete."
+        }
+
+        return "Technical trust signals are weak, which reduces reliability."
     }
 
     private func confidenceLabel(for score: Int) -> String {
