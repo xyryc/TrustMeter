@@ -9,6 +9,7 @@ import SwiftUI
 
 struct AnalyzerView: View {
     @StateObject private var viewModel = AnalyzerViewModel()
+    @EnvironmentObject private var historyStore: HistoryStore
     @State private var productURLText = ""
     @State private var showResult = false
     @State private var showAnalyzingScreen = false
@@ -59,7 +60,8 @@ struct AnalyzerView: View {
             Text(viewModel.errorMessage ?? "Something went wrong.")
         }
         .onReceive(viewModel.$latestResult) { result in
-            if result != nil {
+            if let result {
+                historyStore.add(result)
                 showAnalyzingScreen = false
                 showResult = true
             }
@@ -302,5 +304,6 @@ private extension Color {
 struct AnalyzerView_Previews: PreviewProvider {
     static var previews: some View {
         AnalyzerView()
+            .environmentObject(HistoryStore())
     }
 }

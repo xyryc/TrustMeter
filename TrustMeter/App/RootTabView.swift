@@ -40,5 +40,6 @@ struct RootTabView: View {
 struct RootTabView_Previews: PreviewProvider {
     static var previews: some View {
         RootTabView()
+            .environmentObject(HistoryStore())
     }
 }
