@@ -18,59 +18,68 @@ struct ProductPageParser {
         let ogTitle = extractMetaContent(in: metadataHTML, key: "og:title")
         let ogImage = extractMetaContent(in: metadataHTML, key: "og:image")
         let ogDescription = extractMetaContent(in: metadataHTML, key: "og:description")
-        let siteName = firstNonEmpty(
-            extractMetaContent(in: metadataHTML, key: "og:site_name"),
-            extractMetaContent(in: metadataHTML, key: "application-name"),
-            extractMetaContent(in: metadataHTML, key: "apple-mobile-web-app-title"),
-            extractSiteNameFromTitle(title),
-            cleanHostName(from: pageURL)
-        )
         let twitterTitle = extractMetaContent(in: metadataHTML, key: "twitter:title")
         let twitterImage = extractMetaContent(in: metadataHTML, key: "twitter:image")
 
         let schemaProduct = extractProductSchema(from: metadataHTML)
         let schemaOffer = extractOfferSchema(from: schemaProduct)
 
-        let description = firstNonEmpty(
-            schemaProduct?.stringValue(for: "description"),
-            ogDescription,
-            metaDescription
-        )
+        let titleResult = pickFirst([
+            (schemaProduct?.stringValue(for: "name"), .schema),
+            (ogTitle, .openGraph),
+            (twitterTitle, .twitter),
+            (title, .pageTitle)
+        ])
 
-        let imageURL = firstNonEmpty(
-            schemaProduct?.stringValue(for: "image"),
-            ogImage,
-            twitterImage
-        )
+        let descriptionResult = pickFirst([
+            (schemaProduct?.stringValue(for: "description"), .schema),
+            (ogDescription, .openGraph),
+            (metaDescription, .metaTag)
+        ])
 
-        let priceString = firstNonEmpty(
-            schemaOffer?.stringValue(for: "price"),
-            extractMetaContent(in: metadataHTML, key: "product:price:amount"),
-            urlPrice.map { String($0) },
-            extractFirstPrice(in: html)
-        )
+        let imageResult = pickFirst([
+            (schemaProduct?.stringValue(for: "image"), .schema),
+            (ogImage, .openGraph),
+            (twitterImage, .twitter)
+        ])
 
-        let currency = firstNonEmpty(
-            schemaOffer?.stringValue(for: "priceCurrency"),
-            extractMetaContent(in: metadataHTML, key: "product:price:currency"),
-            currencyCode(for: priceString),
-            inferredCurrency
-        )
+        let siteNameResult = pickFirst([
+            (extractMetaContent(in: metadataHTML, key: "og:site_name"), .openGraph),
+            (extractMetaContent(in: metadataHTML, key: "application-name"), .metaTag),
+            (extractMetaContent(in: metadataHTML, key: "apple-mobile-web-app-title"), .metaTag),
+            (extractSiteNameFromTitle(title), .inferredTitle),
+            (cleanHostName(from: pageURL), .inferredDomain)
+        ])
 
-        let availability = firstNonEmpty(
-            schemaOffer?.stringValue(for: "availability"),
-            extractMetaContent(in: metadataHTML, key: "product:availability")
-        )?.cleanAvailabilityValue
+        let priceResult = pickFirst([
+            (schemaOffer?.stringValue(for: "price"), .schema),
+            (extractMetaContent(in: metadataHTML, key: "product:price:amount"), .metaTag),
+            (urlPrice.map { String($0) }, .urlQuery),
+            (extractFirstPrice(in: html), .rawHTML)
+        ])
+
+        let currencyResult = pickFirst([
+            (schemaOffer?.stringValue(for: "priceCurrency"), .schema),
+            (extractMetaContent(in: metadataHTML, key: "product:price:currency"), .metaTag),
+            (currencyCode(for: priceResult.value), .rawHTML),
+            (inferredCurrency, .inferredDomain)
+        ])
+
+        let availabilityResult = pickFirst([
+            (schemaOffer?.stringValue(for: "availability"), .schema),
+            (extractMetaContent(in: metadataHTML, key: "product:availability"), .metaTag)
+        ])
+        let normalizedAvailability = availabilityResult.value?.cleanAvailabilityValue
 
         return ProductData(
-            title: firstNonEmpty(schemaProduct?.stringValue(for: "name"), ogTitle, twitterTitle, title),
-            productDescription: description,
-            imageURL: imageURL?.absoluteURLString(relativeTo: pageURL),
-            siteName: siteName,
+            title: titleResult.value,
+            productDescription: descriptionResult.value,
+            imageURL: imageResult.value?.absoluteURLString(relativeTo: pageURL),
+            siteName: siteNameResult.value,
             domain: pageURL.host,
-            price: priceString.flatMap(parsePrice),
-            currency: currency,
-            availability: availability,
+            price: priceResult.value.flatMap(parsePrice),
+            currency: currencyResult.value,
+            availability: normalizedAvailability,
             ogTitle: ogTitle,
             ogImage: ogImage?.absoluteURLString(relativeTo: pageURL),
             ogDescription: ogDescription,
@@ -79,7 +88,16 @@ struct ProductPageParser {
             metaDescription: metaDescription,
             hasJSONLDProduct: schemaProduct != nil,
             hasJSONLDOfferPrice: schemaOffer?.stringValue(for: "price") != nil,
-            hasAvailabilityInfo: availability != nil
+            hasAvailabilityInfo: normalizedAvailability != nil,
+            sources: ExtractionSources(
+                title: titleResult.source,
+                description: descriptionResult.source,
+                imageURL: imageResult.source,
+                siteName: siteNameResult.source,
+                price: priceResult.source,
+                currency: currencyResult.source,
+                availability: availabilityResult.source
+            )
         )
     }
 
@@ -252,6 +270,16 @@ struct ProductPageParser {
             guard let value else { return false }
             return !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         } ?? nil
+    }
+
+    private func pickFirst(_ candidates: [(String?, ExtractionSource)]) -> (value: String?, source: ExtractionSource?) {
+        for candidate in candidates {
+            if let value = candidate.0?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty {
+                return (value, candidate.1)
+            }
+        }
+
+        return (nil, nil)
     }
 
     private func normalizeDecimalString(_ value: String) -> String {

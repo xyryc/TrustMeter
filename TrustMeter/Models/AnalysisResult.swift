@@ -37,7 +37,16 @@ struct AnalysisResult: Codable, Identifiable{
             siteName: "Example Store",
             domain: "store.example.com",
             price: 129.99,
-            currency: "USD"
+            currency: "USD",
+            sources: ExtractionSources(
+                title: .schema,
+                description: .openGraph,
+                imageURL: .openGraph,
+                siteName: .openGraph,
+                price: .schema,
+                currency: .schema,
+                availability: .schema
+            )
         ),
         scoreBreakdown: .sample
     )

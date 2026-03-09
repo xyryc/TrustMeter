@@ -66,6 +66,17 @@ struct ResultView: View {
                     DetailChip(icon: "shippingbox.fill", text: availability)
                 }
             }
+
+            HStack(spacing: 12) {
+                ConfidenceBadgeView(
+                    score: result.scoreBreakdown.confidenceScore,
+                    label: result.scoreBreakdown.confidenceLabel
+                )
+
+                Text("Confidence reflects how reliable the extracted fields appear.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(20)
         .background(
@@ -111,6 +122,11 @@ struct ResultView: View {
 
             HStack(spacing: 12) {
                 MetaPill(title: "Store", value: storeName)
+                MetaPill(title: "Price Source", value: sourceLabel(result.productData.sources.price))
+            }
+
+            HStack(spacing: 12) {
+                MetaPill(title: "Title Source", value: sourceLabel(result.productData.sources.title))
                 MetaPill(title: "Checked", value: result.analyzedAt.formatted(date: .abbreviated, time: .shortened))
             }
         }
@@ -189,6 +205,39 @@ struct ResultView: View {
         case 80...:
             return .green
         case 60...79:
+            return .orange
+        default:
+            return .red
+        }
+    }
+
+    private func sourceLabel(_ source: ExtractionSource?) -> String {
+        source?.rawValue ?? "Unavailable"
+    }
+}
+
+private struct ConfidenceBadgeView: View {
+    let score: Int
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.shield")
+            Text("\(label) \(score)%")
+                .fontWeight(.semibold)
+        }
+        .font(.subheadline)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(badgeColor.opacity(0.14), in: Capsule())
+        .foregroundStyle(badgeColor)
+    }
+
+    private var badgeColor: Color {
+        switch score {
+        case 85...:
+            return .green
+        case 65...84:
             return .orange
         default:
             return .red

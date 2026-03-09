@@ -7,6 +7,30 @@
 
 import Foundation
 
+enum ExtractionSource: String, Codable {
+    case schema = "Schema"
+    case openGraph = "Open Graph"
+    case twitter = "Twitter"
+    case metaTag = "Meta Tag"
+    case pageTitle = "Page Title"
+    case urlQuery = "URL Query"
+    case rawHTML = "Raw HTML"
+    case inferredTitle = "Inferred from Title"
+    case inferredDomain = "Inferred from Domain"
+}
+
+struct ExtractionSources: Codable {
+    var title: ExtractionSource?
+    var description: ExtractionSource?
+    var imageURL: ExtractionSource?
+    var siteName: ExtractionSource?
+    var price: ExtractionSource?
+    var currency: ExtractionSource?
+    var availability: ExtractionSource?
+
+    static let empty = ExtractionSources()
+}
+
 struct ProductData: Codable {
     var title: String?
     var productDescription: String?
@@ -29,6 +53,7 @@ struct ProductData: Codable {
     var hasJSONLDProduct: Bool
     var hasJSONLDOfferPrice: Bool
     var hasAvailabilityInfo: Bool
+    var sources: ExtractionSources
     
     init(
         title: String? = nil,
@@ -48,7 +73,8 @@ struct ProductData: Codable {
         metaDescription: String? = nil,
         hasJSONLDProduct: Bool = false,
         hasJSONLDOfferPrice: Bool = false,
-        hasAvailabilityInfo: Bool = false
+        hasAvailabilityInfo: Bool = false,
+        sources: ExtractionSources = .empty
     ){
         self.title = title
         self.productDescription = productDescription
@@ -68,5 +94,6 @@ struct ProductData: Codable {
         self.hasJSONLDProduct = hasJSONLDProduct
         self.hasJSONLDOfferPrice = hasJSONLDOfferPrice
         self.hasAvailabilityInfo = hasAvailabilityInfo
+        self.sources = sources
     }
 }

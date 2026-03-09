@@ -14,6 +14,8 @@ struct ScoreBreakdown: Codable{
     var trustScore: Int
     var totalScore: Int
     var ratingLabel: String
+    var confidenceScore: Int
+    var confidenceLabel: String
     
     var positiveSignals: [String]
     var warnings: [String]
@@ -25,6 +27,8 @@ struct ScoreBreakdown: Codable{
         trustScore: 22,
         totalScore: 82,
         ratingLabel: "Excellent",
+        confidenceScore: 88,
+        confidenceLabel: "High Confidence",
         positiveSignals: [
             "Price and currency found",
             "Open Graph metadata available",
