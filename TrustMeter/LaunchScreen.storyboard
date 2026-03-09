@@ -16,42 +16,42 @@
                         <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
                         <subviews>
                             <view contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="9Y0-fg-r3g">
-                                <rect key="frame" x="129.66666666666666" y="286" width="134" height="134"/>
+                                <rect key="frame" x="132.16666666666666" y="288.5" width="129" height="129"/>
                                 <subviews>
-                                    <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="TM" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="M3X-jF-RYj">
-                                        <rect key="frame" x="0.0" y="38" width="134" height="58"/>
-                                        <fontDescription key="fontDescription" type="roundedSystem" weight="bold" pointSize="48"/>
-                                        <color key="textColor" red="0.050980392156862744" green="0.16862745098039217" blue="0.1803921568627451" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-                                        <nil key="highlightedColor"/>
-                                    </label>
+                                    <imageView clipsSubviews="YES" userInteractionEnabled="NO" contentMode="scaleAspectFit" horizontalHuggingPriority="251" verticalHuggingPriority="251" image="BrandMark" translatesAutoresizingMaskIntoConstraints="NO" id="M3X-jF-RYj">
+                                        <rect key="frame" x="19.5" y="19.5" width="90" height="90"/>
+                                    </imageView>
                                 </subviews>
-                                <color key="backgroundColor" red="0.44313725490196076" green="0.78823529411764703" blue="0.80784313725490198" alpha="0.18000000000000002" colorSpace="custom" customColorSpace="sRGB"/>
+                                <color key="backgroundColor" red="1" green="1" blue="1" alpha="0" colorSpace="custom" customColorSpace="sRGB"/>
                                 <constraints>
-                                    <constraint firstItem="M3X-jF-RYj" firstAttribute="leading" secondItem="9Y0-fg-r3g" secondAttribute="leading" id="A1j-5I-rsA"/>
-                                    <constraint firstAttribute="trailing" secondItem="M3X-jF-RYj" secondAttribute="trailing" id="FQk-Yr-v5X"/>
+                                    <constraint firstItem="M3X-jF-RYj" firstAttribute="centerX" secondItem="9Y0-fg-r3g" secondAttribute="centerX" id="1ZE-5v-5uu"/>
                                     <constraint firstItem="M3X-jF-RYj" firstAttribute="centerY" secondItem="9Y0-fg-r3g" secondAttribute="centerY" id="r1N-QX-u69"/>
+                                    <constraint firstItem="M3X-jF-RYj" firstAttribute="height" secondItem="9Y0-fg-r3g" secondAttribute="height" multiplier="0.7" id="sQp-nP-R7H"/>
+                                    <constraint firstItem="M3X-jF-RYj" firstAttribute="width" secondItem="M3X-jF-RYj" secondAttribute="height" multiplier="1:1" id="tJq-zM-5io"/>
+                                    <constraint firstAttribute="width" constant="129" id="u8P-Vm-K7N"/>
+                                    <constraint firstAttribute="height" constant="129" id="x2R-Ck-Q4A"/>
                                 </constraints>
                             </view>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="TrustMeter" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="3v9-B4-d5R">
-                                <rect key="frame" x="118.33333333333334" y="440" width="156.66666666666666" height="41"/>
-                                <fontDescription key="fontDescription" type="roundedSystem" weight="bold" pointSize="28"/>
+                                <rect key="frame" x="118.33333333333334" y="456" width="156.66666666666666" height="41"/>
+                                <fontDescription key="fontDescription" type="roundedSystem" weight="heavy" pointSize="30"/>
                                 <color key="textColor" red="0.050980392156862744" green="0.16862745098039217" blue="0.1803921568627451" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
                             <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" text="Analyze product trust before you buy" textAlignment="center" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="fAE-hg-PYu">
-                                <rect key="frame" x="68" y="489" width="257.33333333333331" height="20.333333333333314"/>
-                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
-                                <color key="textColor" red="0.13725490196078433" green="0.28627450980392155" blue="0.29803921568627451" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <rect key="frame" x="68" y="505" width="257.33333333333331" height="20.333333333333314"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="15"/>
+                                <color key="textColor" red="0.13725490196078433" green="0.28627450980392155" blue="0.29803921568627451" alpha="0.72" colorSpace="custom" customColorSpace="sRGB"/>
                                 <nil key="highlightedColor"/>
                             </label>
                         </subviews>
                         <viewLayoutGuide key="safeArea" id="Bcu-3y-fUS"/>
-                        <color key="backgroundColor" red="0.8901960784313725" green="0.9921568627450981" blue="0.9921568627450981" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
                         <constraints>
                             <constraint firstItem="9Y0-fg-r3g" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="8Hw-DJ-R8g"/>
                             <constraint firstItem="3v9-B4-d5R" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="D7j-Cy-1Rl"/>
                             <constraint firstItem="fAE-hg-PYu" firstAttribute="top" secondItem="3v9-B4-d5R" secondAttribute="bottom" constant="8" id="OGX-VA-Ym6"/>
-                            <constraint firstItem="3v9-B4-d5R" firstAttribute="top" secondItem="9Y0-fg-r3g" secondAttribute="bottom" constant="20" id="Omf-5E-Dvw"/>
+                            <constraint firstItem="3v9-B4-d5R" firstAttribute="top" secondItem="9Y0-fg-r3g" secondAttribute="bottom" constant="4" id="Omf-5E-Dvw"/>
                             <constraint firstItem="9Y0-fg-r3g" firstAttribute="centerY" secondItem="Ze5-6b-2t3" secondAttribute="centerY" constant="-73" id="Q8f-fg-g5K"/>
                             <constraint firstItem="fAE-hg-PYu" firstAttribute="centerX" secondItem="Ze5-6b-2t3" secondAttribute="centerX" id="iXd-GD-8i7"/>
                             <constraint firstItem="9Y0-fg-r3g" firstAttribute="width" secondItem="9Y0-fg-r3g" secondAttribute="height" multiplier="1:1" id="vZQ-MD-kbh"/>
@@ -63,5 +63,7 @@
             <point key="canvasLocation" x="80" y="70"/>
         </scene>
     </scenes>
-    <resources/>
+    <resources>
+        <image name="BrandMark" width="1024" height="1024"/>
+    </resources>
 </document>

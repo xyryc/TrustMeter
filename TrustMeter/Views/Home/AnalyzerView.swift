@@ -16,7 +16,6 @@ struct AnalyzerView: View {
     @FocusState private var isURLFieldFocused: Bool
 
     private let actionColor = Color(hex: "71C9CE")
-    private let backgroundColor = Color(hex: "E3FDFD")
     private let trustChecks = [
         ("tag", "Price consistency", "Detects visible price and currency details."),
         ("doc.text.magnifyingglass", "Metadata quality", "Checks product title, description, and page metadata."),
@@ -39,11 +38,7 @@ struct AnalyzerView: View {
             }
             .padding()
         }
-        .background(backgroundColor.ignoresSafeArea())
-        .overlay(alignment: .top) {
-            TopGlowView()
-                .allowsHitTesting(false)
-        }
+        .background(Color(.systemGroupedBackground).ignoresSafeArea())
         .scrollDismissesKeyboard(.interactively)
         .navigationDestination(isPresented: $showResult) {
             if let result = viewModel.latestResult {
@@ -112,7 +107,7 @@ private struct HeroSectionView: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Trust Meter")
+                    Text("TrustMeter")
                         .font(.system(size: 34, weight: .bold, design: .rounded))
 
                     Text("Analyze a product page before you buy and turn messy store pages into a simple trust score.")
@@ -122,19 +117,11 @@ private struct HeroSectionView: View {
 
                 Spacer(minLength: 0)
 
-                ZStack {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color.cyan.opacity(0.14))
-                        .frame(width: 86, height: 86)
-
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.white.opacity(0.45), lineWidth: 1)
-                        .frame(width: 68, height: 68)
-
-                    Image(systemName: "viewfinder")
-                        .font(.system(size: 30, weight: .semibold))
-                        .foregroundStyle(.cyan)
-                }
+                Image("BrandMark")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 76, height: 76)
+                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
 
             HStack(spacing: 12) {
@@ -275,16 +262,6 @@ private struct FooterNoteView: View {
             .font(.footnote)
             .foregroundStyle(.secondary)
             .padding(.horizontal, 4)
-    }
-}
-
-private struct TopGlowView: View {
-    var body: some View {
-        Circle()
-            .fill(Color.cyan.opacity(0.10))
-            .frame(width: 320, height: 320)
-            .blur(radius: 40)
-            .offset(y: -160)
     }
 }
 

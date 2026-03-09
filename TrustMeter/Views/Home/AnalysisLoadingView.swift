@@ -9,7 +9,6 @@ import SwiftUI
 
 struct AnalysisLoadingView: View {
     @State private var animationStep = 0
-    private let backgroundColor = Color(hex: "E3FDFD")
     private let accentColor = Color(hex: "71C9CE")
 
     private let analyzingMessages = [
@@ -20,14 +19,8 @@ struct AnalysisLoadingView: View {
 
     var body: some View {
         ZStack {
-            backgroundColor
+            Color(.systemBackground)
                 .ignoresSafeArea()
-
-            Circle()
-                .fill(accentColor.opacity(0.14))
-                .frame(width: 260, height: 260)
-                .blur(radius: 30)
-                .offset(x: 120, y: -240)
 
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
@@ -52,10 +45,10 @@ struct AnalysisLoadingView: View {
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
                 .overlay {
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(accentColor.opacity(0.2), lineWidth: 1)
+                        .stroke(Color(.separator), lineWidth: 0.5)
                 }
 
                 ProgressView(value: Double(animationStep + 1), total: Double(analyzingMessages.count))
