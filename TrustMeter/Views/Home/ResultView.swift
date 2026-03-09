@@ -181,6 +181,8 @@ struct ResultView: View {
     }
 }
 
-#Preview {
-    ResultView(result: .sample)
+struct ResultView_Previews: PreviewProvider {
+    static var previews: some View {
+        ResultView(result: .sample)
+    }
 }

@@ -23,6 +23,8 @@ struct HistoryView: View {
     }
 }
 
-#Preview {
-    HistoryView()
+struct HistoryView_Previews: PreviewProvider {
+    static var previews: some View {
+        HistoryView()
+    }
 }

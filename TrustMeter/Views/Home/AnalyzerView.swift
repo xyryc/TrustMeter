@@ -8,12 +8,10 @@
 import SwiftUI
 
 struct AnalyzerView: View {
-    @State private var productURLText = ""
+    @StateObject private var viewModel = AnalyzerViewModel()
     @State private var showResult = false
-    @State private var isAnalyzing = false
     @State private var animationStep = 0
 
-    private let dummyResult = AnalysisResult.sample
     private let analyzingMessages = [
         "Inspecting product page",
         "Scanning metadata",
@@ -32,7 +30,7 @@ struct AnalyzerView: View {
                 inputCard
                 checksCard
 
-                if isAnalyzing {
+                if viewModel.isAnalyzing {
                     analyzingCard
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -46,9 +44,21 @@ struct AnalyzerView: View {
                 .fill(backgroundGradient)
                 .ignoresSafeArea()
         }
-        .animation(.easeInOut(duration: 0.25), value: isAnalyzing)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.isAnalyzing)
         .navigationDestination(isPresented: $showResult) {
-            ResultView(result: dummyResult)
+            if let result = viewModel.latestResult {
+                ResultView(result: result)
+            }
+        }
+        .alert("Analysis Failed", isPresented: errorAlertBinding) {
+            Button("OK") {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? "Something went wrong.")
+        }
+        .onReceive(viewModel.$latestResult) { result in
+            showResult = result != nil
         }
     }
 
@@ -89,19 +99,19 @@ struct AnalyzerView: View {
             Label("Product URL", systemImage: "link")
                 .font(.headline)
 
-            TextField("http://example.com/product", text: $productURLText)
+            TextField("http://example.com/product", text: $viewModel.productURLText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)
                 .keyboardType(.URL)
-                .disabled(isAnalyzing)
+                .disabled(viewModel.isAnalyzing)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 14)
                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             Button(action: startAnalysis) {
                 HStack {
-                    Image(systemName: isAnalyzing ? "hourglass" : "viewfinder.circle.fill")
-                    Text(isAnalyzing ? "Analyzing..." : "Analyze Product")
+                    Image(systemName: viewModel.isAnalyzing ? "hourglass" : "viewfinder.circle.fill")
+                    Text(viewModel.isAnalyzing ? "Analyzing..." : "Analyze Product")
                 }
                 .font(.headline)
                 .frame(maxWidth: .infinity)
@@ -110,8 +120,8 @@ struct AnalyzerView: View {
             .buttonStyle(.plain)
             .foregroundStyle(.white)
             .background(buttonBackground, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .disabled(isAnalyzing || trimmedURL.isEmpty)
-            .opacity(isAnalyzing || trimmedURL.isEmpty ? 0.65 : 1)
+            .disabled(viewModel.isAnalyzing || trimmedURL.isEmpty)
+            .opacity(viewModel.isAnalyzing || trimmedURL.isEmpty ? 0.65 : 1)
         }
         .cardStyle()
     }
@@ -273,7 +283,18 @@ struct AnalyzerView: View {
     }
 
     private var trimmedURL: String {
-        productURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+        viewModel.productURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var errorAlertBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.errorMessage != nil },
+            set: { isPresented in
+                if !isPresented {
+                    viewModel.errorMessage = nil
+                }
+            }
+        )
     }
 
     private func quickStat(title: String, subtitle: String) -> some View {
@@ -291,28 +312,30 @@ struct AnalyzerView: View {
     }
 
     private func startAnalysis() {
-        guard !isAnalyzing else { return }
+        guard !viewModel.isAnalyzing else { return }
 
-        isAnalyzing = true
         animationStep = 0
 
         Task {
-            for step in analyzingMessages.indices {
-                await MainActor.run {
-                    animationStep = step
-                }
+            async let analysisTask: Void = viewModel.analyze(minimumDuration: .milliseconds(3300))
+            await animateAnalysisSteps()
+            await analysisTask
+        }
+    }
 
-                try? await Task.sleep(for: .milliseconds(1100))
-            }
-
+    private func animateAnalysisSteps() async {
+        for step in analyzingMessages.indices {
             await MainActor.run {
-                isAnalyzing = false
-                showResult = true
+                animationStep = step
             }
+
+            try? await Task.sleep(for: .milliseconds(1100))
         }
     }
 }
 
-#Preview {
-    AnalyzerView()
+struct AnalyzerView_Previews: PreviewProvider {
+    static var previews: some View {
+        AnalyzerView()
+    }
 }
