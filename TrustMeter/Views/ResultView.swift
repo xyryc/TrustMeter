@@ -7,37 +7,27 @@
 import SwiftUI
 
 struct ResultView: View{
-    let totalScore: Int
-    let priceScore: Int
-    let metaDataScore: Int
-    let completenessScore: Int
-    let trustScore: Int
+    let result: AnalysisResult
     
     var body: some View{
-        VStack(){
+        VStack(alignment: .leading, spacing: 16){
             Text("Result")
                 .font(.title.bold())
             
-            Text("Total: \(totalScore)")
+            Text("Total: \(result.scoreBreakdown.totalScore)")
                 .font(.title2)
             
-            Text("Price: \(priceScore)/25")
-            Text("Metadata: \(metaDataScore)/25")
-            Text("Completeness: \(completenessScore)/25")
-            Text("Trust: \(trustScore)/25")
+            Text("Price: \(result.scoreBreakdown.priceScore)/25")
+            Text("Metadata: \(result.scoreBreakdown.metadataScore)/25")
+            Text("Completeness: \(result.scoreBreakdown.completenessScore)/25")
+            Text("Trust: \(result.scoreBreakdown.trustScore)/25")
             
-            Spacer()
         }
         .padding()
+        .background(.gray.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
     }
 }
 
 #Preview{
-    ResultView(
-        totalScore: 85,
-        priceScore: 20,
-        metaDataScore: 50,
-        completenessScore: 20,
-        trustScore: 60
-    )
+    ResultView( result: .sample)
 }

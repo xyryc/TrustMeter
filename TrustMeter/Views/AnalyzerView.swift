@@ -11,6 +11,8 @@ struct AnalyzerView: View {
     @State private var productURLText = ""
     @State private var showResult = false
     
+    private let dummyResult = AnalysisResult.sample
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 16){
             Text("Trust Meter").font(.largeTitle.bold())
@@ -31,7 +33,7 @@ struct AnalyzerView: View {
         }
         .padding()
         .navigationDestination(isPresented: $showResult){
-            ResultView(totalScore: 10, priceScore: 20, metaDataScore: 30, completenessScore: 40, trustScore: 50)
+            ResultView(result: dummyResult)
         }
     }
 }
