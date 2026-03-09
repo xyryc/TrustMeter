@@ -10,17 +10,15 @@ import Foundation
 
 @MainActor
 final class AnalyzerViewModel: ObservableObject {
-    @Published var productURLText = ""
     @Published private(set) var isAnalyzing = false
     @Published var latestResult: AnalysisResult?
     @Published var errorMessage: String?
 
     private let analyzerService = AnalyzerService()
 
-    func analyze(minimumDuration: Duration) async {
+    func analyze(urlText: String, minimumDuration: Duration) async {
         guard !isAnalyzing else { return }
 
-        let urlText = productURLText
         let analyzerService = self.analyzerService
 
         isAnalyzing = true
@@ -29,7 +27,7 @@ final class AnalyzerViewModel: ObservableObject {
 
         async let minimumDelay: Void = waitForMinimumDuration(minimumDuration)
         async let analysisResult: AnalysisResult = Task.detached(priority: .userInitiated) {
-            try await self.analyzerService.analyze(urlString: urlText)
+            try await analyzerService.analyze(urlString: urlText)
         }.value
 
         do {

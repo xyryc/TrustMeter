@@ -9,8 +9,10 @@ import SwiftUI
 
 struct AnalyzerView: View {
     @StateObject private var viewModel = AnalyzerViewModel()
+    @State private var productURLText = ""
     @State private var showResult = false
     @State private var animationStep = 0
+    @FocusState private var isURLFieldFocused: Bool
 
     private let analyzingMessages = [
         "Inspecting product page",
@@ -99,14 +101,19 @@ struct AnalyzerView: View {
             Label("Product URL", systemImage: "link")
                 .font(.headline)
 
-            TextField("http://example.com/product", text: $viewModel.productURLText)
+            TextField("http://example.com/product", text: $productURLText)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled(true)
                 .keyboardType(.URL)
+                .submitLabel(.go)
+                .focused($isURLFieldFocused)
                 .disabled(viewModel.isAnalyzing)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 14)
                 .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .onSubmit {
+                    startAnalysis()
+                }
 
             Button(action: startAnalysis) {
                 HStack {
@@ -283,7 +290,7 @@ struct AnalyzerView: View {
     }
 
     private var trimmedURL: String {
-        viewModel.productURLText.trimmingCharacters(in: .whitespacesAndNewlines)
+        productURLText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private var errorAlertBinding: Binding<Bool> {
@@ -313,11 +320,16 @@ struct AnalyzerView: View {
 
     private func startAnalysis() {
         guard !viewModel.isAnalyzing else { return }
+        guard !trimmedURL.isEmpty else { return }
 
+        isURLFieldFocused = false
         animationStep = 0
 
         Task {
-            async let analysisTask: Void = viewModel.analyze(minimumDuration: .milliseconds(3300))
+            async let analysisTask: Void = viewModel.analyze(
+                urlText: trimmedURL,
+                minimumDuration: .milliseconds(3300)
+            )
             await animateAnalysisSteps()
             await analysisTask
         }
