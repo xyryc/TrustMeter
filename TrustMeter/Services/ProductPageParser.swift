@@ -10,6 +10,8 @@ import Foundation
 struct ProductPageParser {
     func parse(html: String, pageURL: URL) -> ProductData {
         let metadataHTML = limitedMetadataHTML(from: html)
+        let urlPrice = extractPriceFromURL(pageURL)
+        let inferredCurrency = inferredCurrency(for: pageURL)
 
         let title = extractTagContent(named: "title", in: metadataHTML)
         let metaDescription = extractMetaContent(in: metadataHTML, key: "description")
@@ -38,13 +40,15 @@ struct ProductPageParser {
         let priceString = firstNonEmpty(
             schemaOffer?.stringValue(for: "price"),
             extractMetaContent(in: metadataHTML, key: "product:price:amount"),
+            urlPrice.map { String($0) },
             extractFirstPrice(in: html)
         )
 
         let currency = firstNonEmpty(
             schemaOffer?.stringValue(for: "priceCurrency"),
             extractMetaContent(in: metadataHTML, key: "product:price:currency"),
-            currencyCode(for: priceString)
+            currencyCode(for: priceString),
+            inferredCurrency
         )
 
         let availability = firstNonEmpty(
@@ -195,20 +199,27 @@ struct ProductPageParser {
 
     private func extractFirstPrice(in html: String) -> String? {
         let searchableHTML = String(html.prefix(300_000))
-        let pattern = #"([$€£])\s?([0-9]+(?:[.,][0-9]{2})?)"#
+        let pattern = #"(?:([$€£])\s?([0-9]+(?:[.,][0-9]{2})?)|(?:BDT|Tk\.?)\s?([0-9]+(?:[.,][0-9]{2})?))"#
 
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
             return nil
         }
 
         let range = NSRange(searchableHTML.startIndex..., in: searchableHTML)
-        guard let match = regex.firstMatch(in: searchableHTML, options: [], range: range),
-              let symbolRange = Range(match.range(at: 1), in: searchableHTML),
-              let amountRange = Range(match.range(at: 2), in: searchableHTML) else {
+        guard let match = regex.firstMatch(in: searchableHTML, options: [], range: range) else {
             return nil
         }
 
-        return String(searchableHTML[symbolRange]) + String(searchableHTML[amountRange])
+        if let symbolRange = Range(match.range(at: 1), in: searchableHTML),
+           let amountRange = Range(match.range(at: 2), in: searchableHTML) {
+            return String(searchableHTML[symbolRange]) + String(searchableHTML[amountRange])
+        }
+
+        if let amountRange = Range(match.range(at: 3), in: searchableHTML) {
+            return String(searchableHTML[amountRange])
+        }
+
+        return nil
     }
 
     private func parsePrice(from string: String) -> Double? {
@@ -223,6 +234,9 @@ struct ProductPageParser {
         if priceString.contains("$") { return "USD" }
         if priceString.contains("€") { return "EUR" }
         if priceString.contains("£") { return "GBP" }
+        if priceString.localizedCaseInsensitiveContains("BDT") || priceString.localizedCaseInsensitiveContains("Tk") {
+            return "BDT"
+        }
 
         return nil
     }
@@ -244,6 +258,25 @@ struct ProductPageParser {
         }
 
         return value.replacingOccurrences(of: ",", with: "")
+    }
+
+    private func extractPriceFromURL(_ url: URL) -> Double? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let priceValue = components.queryItems?.first(where: { $0.name == "price" })?.value else {
+            return nil
+        }
+
+        return parsePrice(from: priceValue)
+    }
+
+    private func inferredCurrency(for url: URL) -> String? {
+        guard let host = url.host?.lowercased() else { return nil }
+
+        if host.hasSuffix(".com.bd") || host.hasSuffix(".bd") {
+            return "BDT"
+        }
+
+        return nil
     }
 }
 

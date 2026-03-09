@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ResultView: View {
     let result: AnalysisResult
+    @State private var isDescriptionExpanded = false
 
     var body: some View {
         ScrollView {
@@ -102,8 +103,10 @@ struct ResultView: View {
             }
 
             if let description = result.productData.productDescription, !description.isEmpty {
-                Text(description)
-                    .foregroundStyle(.secondary)
+                ExpandableDescriptionView(
+                    description: description,
+                    isExpanded: $isDescriptionExpanded
+                )
             }
 
             HStack(spacing: 12) {
@@ -177,6 +180,27 @@ struct ResultView: View {
             return .orange
         default:
             return .red
+        }
+    }
+}
+
+private struct ExpandableDescriptionView: View {
+    let description: String
+    @Binding var isExpanded: Bool
+
+    private let collapsedLineLimit = 3
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(description)
+                .foregroundStyle(.secondary)
+                .lineLimit(isExpanded ? nil : collapsedLineLimit)
+
+            Button(isExpanded ? "See less" : "See more") {
+                isExpanded.toggle()
+            }
+            .font(.subheadline.weight(.semibold))
+            .buttonStyle(.plain)
         }
     }
 }
