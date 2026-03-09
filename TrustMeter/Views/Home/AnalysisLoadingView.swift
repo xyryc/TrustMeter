@@ -9,6 +9,8 @@ import SwiftUI
 
 struct AnalysisLoadingView: View {
     @State private var animationStep = 0
+    private let backgroundColor = Color(hex: "E3FDFD")
+    private let accentColor = Color(hex: "71C9CE")
 
     private let analyzingMessages = [
         "Inspecting product page",
@@ -18,16 +20,14 @@ struct AnalysisLoadingView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color.blue.opacity(0.12),
-                    Color(.systemBackground),
-                    Color.indigo.opacity(0.08)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .ignoresSafeArea()
+            backgroundColor
+                .ignoresSafeArea()
+
+            Circle()
+                .fill(accentColor.opacity(0.14))
+                .frame(width: 260, height: 260)
+                .blur(radius: 30)
+                .offset(x: 120, y: -240)
 
             VStack(spacing: 24) {
                 VStack(spacing: 12) {
@@ -52,10 +52,14 @@ struct AnalysisLoadingView: View {
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .background(Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(accentColor.opacity(0.2), lineWidth: 1)
+                }
 
                 ProgressView(value: Double(animationStep + 1), total: Double(analyzingMessages.count))
-                    .tint(.accentColor)
+                    .tint(accentColor)
                     .frame(maxWidth: .infinity)
             }
             .padding(24)
@@ -69,19 +73,19 @@ struct AnalysisLoadingView: View {
     private var scanningIndicator: some View {
         ZStack {
             Circle()
-                .stroke(.tint.opacity(0.2), lineWidth: 12)
+                .stroke(accentColor.opacity(0.22), lineWidth: 12)
                 .frame(width: 88, height: 88)
 
             Circle()
                 .trim(from: 0.15, to: 0.85)
-                .stroke(.tint, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .stroke(accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                 .frame(width: 88, height: 88)
                 .rotationEffect(.degrees(Double(animationStep) * 120))
                 .animation(.easeInOut(duration: 0.45), value: animationStep)
 
             Image(systemName: "viewfinder")
                 .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.tint)
+                .foregroundStyle(accentColor)
         }
     }
 
@@ -133,7 +137,7 @@ struct AnalysisLoadingView: View {
 
     private func stepFillColor(isActive: Bool, isComplete: Bool) -> Color {
         if isComplete || isActive {
-            return .accentColor
+            return accentColor
         }
 
         return Color(.systemGray5)
@@ -141,7 +145,7 @@ struct AnalysisLoadingView: View {
 
     private func stepBorderColor(isActive: Bool, isComplete: Bool) -> Color {
         if isComplete || isActive {
-            return .accentColor
+            return accentColor
         }
 
         return Color(.systemGray4)
@@ -158,5 +162,19 @@ struct AnalysisLoadingView: View {
 struct AnalysisLoadingView_Previews: PreviewProvider {
     static var previews: some View {
         AnalysisLoadingView()
+    }
+}
+
+private extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+
+        let red = Double((int >> 16) & 0xFF) / 255
+        let green = Double((int >> 8) & 0xFF) / 255
+        let blue = Double(int & 0xFF) / 255
+
+        self.init(.sRGB, red: red, green: green, blue: blue, opacity: 1)
     }
 }

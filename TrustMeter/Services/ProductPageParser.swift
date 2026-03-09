@@ -18,7 +18,13 @@ struct ProductPageParser {
         let ogTitle = extractMetaContent(in: metadataHTML, key: "og:title")
         let ogImage = extractMetaContent(in: metadataHTML, key: "og:image")
         let ogDescription = extractMetaContent(in: metadataHTML, key: "og:description")
-        let siteName = extractMetaContent(in: metadataHTML, key: "og:site_name")
+        let siteName = firstNonEmpty(
+            extractMetaContent(in: metadataHTML, key: "og:site_name"),
+            extractMetaContent(in: metadataHTML, key: "application-name"),
+            extractMetaContent(in: metadataHTML, key: "apple-mobile-web-app-title"),
+            extractSiteNameFromTitle(title),
+            cleanHostName(from: pageURL)
+        )
         let twitterTitle = extractMetaContent(in: metadataHTML, key: "twitter:title")
         let twitterImage = extractMetaContent(in: metadataHTML, key: "twitter:image")
 
@@ -260,6 +266,24 @@ struct ProductPageParser {
         return value.replacingOccurrences(of: ",", with: "")
     }
 
+    private func extractSiteNameFromTitle(_ title: String?) -> String? {
+        guard let title else { return nil }
+
+        let separators = [" | ", " - ", " – ", " — "]
+
+        for separator in separators {
+            let parts = title.components(separatedBy: separator).map {
+                $0.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+
+            if parts.count >= 2, let lastPart = parts.last, lastPart.count >= 2 {
+                return lastPart
+            }
+        }
+
+        return nil
+    }
+
     private func extractPriceFromURL(_ url: URL) -> Double? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let priceValue = components.queryItems?.first(where: { $0.name == "price" })?.value else {
@@ -277,6 +301,23 @@ struct ProductPageParser {
         }
 
         return nil
+    }
+
+    private func cleanHostName(from url: URL) -> String? {
+        guard let host = url.host?.lowercased() else { return nil }
+
+        let parts = host
+            .split(separator: ".")
+            .filter { part in
+                let value = String(part)
+                return value != "www" && value != "m"
+            }
+
+        guard let firstPart = parts.first else { return nil }
+
+        let rawName = String(firstPart)
+        let capitalizedName = rawName.prefix(1).uppercased() + rawName.dropFirst()
+        return capitalizedName
     }
 }
 

@@ -110,7 +110,7 @@ struct ResultView: View {
             }
 
             HStack(spacing: 12) {
-                MetaPill(title: "Store", value: result.productData.siteName ?? "Unknown")
+                MetaPill(title: "Store", value: storeName)
                 MetaPill(title: "Checked", value: result.analyzedAt.formatted(date: .abbreviated, time: .shortened))
             }
         }
@@ -158,6 +158,18 @@ struct ResultView: View {
 
     private var domainFromURL: String {
         URL(string: result.url)?.host ?? result.url
+    }
+
+    private var storeName: String {
+        if let siteName = result.productData.siteName, !siteName.isEmpty {
+            return siteName
+        }
+
+        if let domain = result.productData.domain, !domain.isEmpty {
+            return domain
+        }
+
+        return "Store"
     }
 
     private var formattedPrice: String? {

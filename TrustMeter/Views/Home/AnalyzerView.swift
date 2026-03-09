@@ -16,6 +16,7 @@ struct AnalyzerView: View {
     @FocusState private var isURLFieldFocused: Bool
 
     private let actionColor = Color(hex: "71C9CE")
+    private let backgroundColor = Color(hex: "E3FDFD")
     private let trustChecks = [
         ("tag", "Price consistency", "Detects visible price and currency details."),
         ("doc.text.magnifyingglass", "Metadata quality", "Checks product title, description, and page metadata."),
@@ -38,7 +39,7 @@ struct AnalyzerView: View {
             }
             .padding()
         }
-        .background(Color(.systemGroupedBackground).ignoresSafeArea())
+        .background(backgroundColor.ignoresSafeArea())
         .overlay(alignment: .top) {
             TopGlowView()
                 .allowsHitTesting(false)
@@ -100,7 +101,7 @@ struct AnalyzerView: View {
         Task {
             await viewModel.analyze(
                 urlText: trimmedURL,
-                minimumDuration: .milliseconds(3300)
+                minimumDuration: .seconds(10)
             )
         }
     }
