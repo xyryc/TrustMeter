@@ -8,18 +8,15 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @AppStorage("prefersDarkTheme") private var prefersDarkTheme = false
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Settings")
-                .font(.largeTitle.bold())
-
-            Text("App preferences and analysis options will live here.")
-                .foregroundStyle(.secondary)
-
-            Spacer()
+        Form {
+            Section("Appearance") {
+                Toggle("Dark Mode", isOn: $prefersDarkTheme)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding()
+        .navigationTitle("Settings")
     }
 }
 

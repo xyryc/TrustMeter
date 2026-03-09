@@ -8,13 +8,15 @@
 import SwiftUI
 
 struct RootTabView: View {
+    @AppStorage("prefersDarkTheme") private var prefersDarkTheme = false
+
     var body: some View {
         TabView {
             NavigationStack {
                 AnalyzerView()
             }
             .tabItem {
-                Label("Home", systemImage: "house")
+                Label("Analyze", systemImage: "viewfinder")
             }
 
             NavigationStack {
@@ -31,6 +33,7 @@ struct RootTabView: View {
                 Label("Settings", systemImage: "gearshape")
             }
         }
+        .preferredColorScheme(prefersDarkTheme ? .dark : .light)
     }
 }
 
