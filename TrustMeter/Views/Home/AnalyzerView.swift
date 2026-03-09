@@ -11,14 +11,9 @@ struct AnalyzerView: View {
     @StateObject private var viewModel = AnalyzerViewModel()
     @State private var productURLText = ""
     @State private var showResult = false
-    @State private var animationStep = 0
+    @State private var showAnalyzingScreen = false
     @FocusState private var isURLFieldFocused: Bool
 
-    private let analyzingMessages = [
-        "Inspecting product page",
-        "Scanning metadata",
-        "Calculating trust signals"
-    ]
     private let trustChecks = [
         ("tag", "Price consistency"),
         ("doc.text.magnifyingglass", "Metadata quality"),
@@ -32,11 +27,6 @@ struct AnalyzerView: View {
                 inputCard
                 checksCard
 
-                if viewModel.isAnalyzing {
-                    analyzingCard
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                }
-
                 Spacer(minLength: 0)
             }
             .padding()
@@ -46,11 +36,13 @@ struct AnalyzerView: View {
                 .fill(backgroundGradient)
                 .ignoresSafeArea()
         }
-        .animation(.easeInOut(duration: 0.25), value: viewModel.isAnalyzing)
         .navigationDestination(isPresented: $showResult) {
             if let result = viewModel.latestResult {
                 ResultView(result: result)
             }
+        }
+        .fullScreenCover(isPresented: $showAnalyzingScreen) {
+            AnalysisLoadingView()
         }
         .alert("Analysis Failed", isPresented: errorAlertBinding) {
             Button("OK") {
@@ -60,7 +52,18 @@ struct AnalyzerView: View {
             Text(viewModel.errorMessage ?? "Something went wrong.")
         }
         .onReceive(viewModel.$latestResult) { result in
-            showResult = result != nil
+            if result != nil {
+                showAnalyzingScreen = false
+                showResult = true
+            }
+        }
+        .onReceive(viewModel.$isAnalyzing) { isAnalyzing in
+            showAnalyzingScreen = isAnalyzing
+        }
+        .onReceive(viewModel.$errorMessage) { errorMessage in
+            if errorMessage != nil {
+                showAnalyzingScreen = false
+            }
         }
     }
 
@@ -155,39 +158,6 @@ struct AnalyzerView: View {
         .cardStyle()
     }
 
-    private var analyzingCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 12) {
-                scanningIndicator
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Analyzing")
-                        .font(.headline)
-
-                    Text(analyzingMessages[animationStep])
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 14) {
-                ForEach(Array(analyzingMessages.enumerated()), id: \.offset) { index, message in
-                    analyzingStepRow(
-                        number: index + 1,
-                        message: message,
-                        isActive: index == animationStep,
-                        isComplete: index < animationStep
-                    )
-                }
-            }
-
-            ProgressView(value: Double(animationStep + 1), total: Double(analyzingMessages.count))
-                .tint(.accentColor)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-    }
-
     private var backgroundGradient: LinearGradient {
         LinearGradient(
             colors: [
@@ -206,87 +176,6 @@ struct AnalyzerView: View {
             startPoint: .leading,
             endPoint: .trailing
         )
-    }
-
-    private var scanningIndicator: some View {
-        ZStack {
-            Circle()
-                .stroke(.tint.opacity(0.2), lineWidth: 10)
-                .frame(width: 52, height: 52)
-
-            Circle()
-                .trim(from: 0.15, to: 0.85)
-                .stroke(.tint, style: StrokeStyle(lineWidth: 6, lineCap: .round))
-                .frame(width: 52, height: 52)
-                .rotationEffect(.degrees(Double(animationStep) * 120))
-                .animation(.easeInOut(duration: 0.45), value: animationStep)
-
-            Image(systemName: "viewfinder")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.tint)
-        }
-    }
-
-    private func analyzingStepRow(
-        number: Int,
-        message: String,
-        isActive: Bool,
-        isComplete: Bool
-    ) -> some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(stepFillColor(isActive: isActive, isComplete: isComplete))
-                    .frame(width: 34, height: 34)
-                    .overlay {
-                        Circle()
-                            .stroke(stepBorderColor(isActive: isActive, isComplete: isComplete), lineWidth: 1)
-                    }
-
-                if isComplete {
-                    Image(systemName: "checkmark")
-                        .font(.footnote.weight(.bold))
-                        .foregroundStyle(.white)
-                } else {
-                    Text("\(number)")
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(isActive ? .white : .primary)
-                }
-            }
-            .scaleEffect(isActive ? 1.08 : 1)
-            .animation(.easeInOut(duration: 0.35), value: isActive)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Step \(number)")
-                    .font(.subheadline.weight(.semibold))
-
-                Text(message)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer()
-
-            if isActive {
-                ProgressView()
-                    .controlSize(.small)
-            }
-        }
-    }
-
-    private func stepFillColor(isActive: Bool, isComplete: Bool) -> Color {
-        if isComplete || isActive {
-            return .accentColor
-        }
-
-        return Color(.systemGray5)
-    }
-
-    private func stepBorderColor(isActive: Bool, isComplete: Bool) -> Color {
-        if isComplete || isActive {
-            return .accentColor
-        }
-
-        return Color(.systemGray4)
     }
 
     private var trimmedURL: String {
@@ -323,25 +212,12 @@ struct AnalyzerView: View {
         guard !trimmedURL.isEmpty else { return }
 
         isURLFieldFocused = false
-        animationStep = 0
 
         Task {
-            async let analysisTask: Void = viewModel.analyze(
+            await viewModel.analyze(
                 urlText: trimmedURL,
                 minimumDuration: .milliseconds(3300)
             )
-            await animateAnalysisSteps()
-            await analysisTask
-        }
-    }
-
-    private func animateAnalysisSteps() async {
-        for step in analyzingMessages.indices {
-            await MainActor.run {
-                animationStep = step
-            }
-
-            try? await Task.sleep(for: .milliseconds(1100))
         }
     }
 }
