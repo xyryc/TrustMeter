@@ -10,7 +10,6 @@ import Foundation
 struct ProductPageParser {
     func parse(html: String, pageURL: URL) -> ProductData {
         let metadataHTML = limitedMetadataHTML(from: html)
-        let urlPrice = extractBestPriceFromURL(pageURL)
         let inferredCurrency = inferredCurrency(for: pageURL)
 
         let title = extractTagContent(named: "title", in: metadataHTML)
@@ -51,12 +50,34 @@ struct ProductPageParser {
             (cleanHostName(from: pageURL), .inferredDomain)
         ])
 
-        let priceResult = pickFirst([
+        let structuredPriceResult = pickFirst([
             (schemaOffer?.stringValue(for: "price"), .schema),
-            (extractMetaContent(in: metadataHTML, key: "product:price:amount"), .metaTag),
-            (urlPrice.map { String($0) }, .urlQuery),
-            (extractFirstPrice(in: html), .rawHTML)
+            (extractMetaContent(in: metadataHTML, key: "product:price:amount"), .metaTag)
         ])
+
+        let urlPriceResult = pickFirst([
+            (extractBestPriceFromURL(pageURL).map { String($0) }, .urlQuery)
+        ])
+
+        let rawHTMLPriceResult = pickFirst([
+            (extractFirstPrice(in: html, pageURL: pageURL), .rawHTML)
+        ])
+
+        let priceResult: (value: String?, source: ExtractionSource?)
+        if isLazadaFamilyHost(pageURL) {
+            // On Daraz/Lazada pages, query tracking prices are usually more reliable than first raw HTML match.
+            priceResult = pickFirst([
+                (structuredPriceResult.value, structuredPriceResult.source ?? .schema),
+                (urlPriceResult.value, urlPriceResult.source ?? .urlQuery),
+                (rawHTMLPriceResult.value, rawHTMLPriceResult.source ?? .rawHTML)
+            ])
+        } else {
+            priceResult = pickFirst([
+                (structuredPriceResult.value, structuredPriceResult.source ?? .schema),
+                (rawHTMLPriceResult.value, rawHTMLPriceResult.source ?? .rawHTML),
+                (urlPriceResult.value, urlPriceResult.source ?? .urlQuery)
+            ])
+        }
 
         let currencyResult = pickFirst([
             (schemaOffer?.stringValue(for: "priceCurrency"), .schema),
@@ -221,9 +242,19 @@ struct ProductPageParser {
         return nil
     }
 
-    private func extractFirstPrice(in html: String) -> String? {
+    private func extractFirstPrice(in html: String, pageURL: URL) -> String? {
         let searchableHTML = String(html.prefix(300_000))
-        let pattern = #"(?:([$€£])\s?([0-9]+(?:[.,][0-9]{2})?)|(?:BDT|Tk\.?)\s?([0-9]+(?:[.,][0-9]{2})?))"#
+
+        if isLazadaFamilyHost(pageURL),
+           let bdtAmount = firstRegexGroup(
+                in: searchableHTML,
+                pattern: #"(?:৳|BDT|Tk\.?)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)"#,
+                captureGroup: 1
+           ) {
+            return "BDT \(bdtAmount)"
+        }
+
+        let pattern = #"(?:([$€£৳])\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?)|(?:BDT|Tk\.?)\s*([0-9][0-9,]*(?:\.[0-9]{1,2})?))"#
 
         guard let regex = try? NSRegularExpression(pattern: pattern) else {
             return nil
@@ -258,7 +289,9 @@ struct ProductPageParser {
         if priceString.contains("$") { return "USD" }
         if priceString.contains("€") { return "EUR" }
         if priceString.contains("£") { return "GBP" }
-        if priceString.localizedCaseInsensitiveContains("BDT") || priceString.localizedCaseInsensitiveContains("Tk") {
+        if priceString.contains("৳")
+            || priceString.localizedCaseInsensitiveContains("BDT")
+            || priceString.localizedCaseInsensitiveContains("Tk") {
             return "BDT"
         }
 
@@ -313,6 +346,9 @@ struct ProductPageParser {
     }
 
     private func extractBestPriceFromURL(_ url: URL) -> Double? {
+        // URL query prices are only a fallback for known tracking-style URLs.
+        guard isLazadaFamilyHost(url) else { return nil }
+
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let queryItems = components.queryItems else {
             return nil
@@ -324,7 +360,7 @@ struct ProductPageParser {
         }
 
         if let priceCompare = queryItems.first(where: { $0.name == "priceCompare" })?.value,
-           let parsedFromCompare = extractPriceFromPriceCompare(priceCompare) {
+           let parsedFromCompare = extractPriceFromPriceCompare(priceCompare, pageURL: url) {
             return parsedFromCompare
         }
 
@@ -338,16 +374,17 @@ struct ProductPageParser {
 
     private func parseStrictNumericPrice(_ rawValue: String) -> Double? {
         let cleaned = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        let pattern = #"^\d+(?:[.,]\d{1,2})?$"#
+        let normalized = cleaned.replacingOccurrences(of: ",", with: "")
+        let pattern = #"^\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$"#
 
-        guard cleaned.range(of: pattern, options: .regularExpression) != nil else {
+        guard normalized.range(of: pattern, options: .regularExpression) != nil else {
             return nil
         }
 
-        return parsePrice(from: cleaned)
+        return Double(normalized)
     }
 
-    private func extractPriceFromPriceCompare(_ rawValue: String) -> Double? {
+    private func extractPriceFromPriceCompare(_ rawValue: String, pageURL: URL) -> Double? {
         let decoded = repeatedlyRemovingPercentEncoding(rawValue)
         let fields = decoded.components(separatedBy: ";")
 
@@ -360,7 +397,7 @@ struct ProductPageParser {
 
             let rawAmount = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
             guard let amount = parseStrictNumericPrice(rawAmount) else { return nil }
-            return normalizeMinorUnitPriceIfNeeded(amount)
+            return normalizedTrackingPrice(amount, pageURL: pageURL)
         }
 
         return candidates.first
@@ -397,12 +434,34 @@ struct ProductPageParser {
         return current
     }
 
-    private func normalizeMinorUnitPriceIfNeeded(_ value: Double) -> Double {
-        if value >= 1_000_000, value.truncatingRemainder(dividingBy: 100) == 0 {
+    private func firstRegexGroup(in text: String, pattern: String, captureGroup: Int) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return nil
+        }
+
+        let range = NSRange(text.startIndex..., in: text)
+        guard let match = regex.firstMatch(in: text, options: [], range: range),
+              let valueRange = Range(match.range(at: captureGroup), in: text) else {
+            return nil
+        }
+
+        return String(text[valueRange])
+    }
+
+    private func normalizedTrackingPrice(_ value: Double, pageURL: URL) -> Double {
+        // Only normalize known Lazada-family tracking hosts; keep other sites untouched.
+        guard isLazadaFamilyHost(pageURL) else { return value }
+
+        if value.truncatingRemainder(dividingBy: 1) == 0 {
             return value / 100
         }
 
         return value
+    }
+
+    private func isLazadaFamilyHost(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host.contains("daraz.") || host.contains("lazada.")
     }
 
     private func inferredCurrency(for url: URL) -> String? {
