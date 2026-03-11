@@ -10,13 +10,34 @@ import SwiftUI
 struct AnalysisLoadingView: View {
     let totalDuration: Double
     @State private var animationStep = 0
-    @State private var progressValue = 0.0
+    @State private var activeDetailIndex = 0
     private let accentColor = Color(hex: "71C9CE")
 
-    private let analyzingMessages = [
-        "Inspecting product page",
-        "Scanning metadata",
-        "Calculating trust signals"
+    private let loadingSteps = [
+        LoadingStep(
+            title: "Step 1",
+            messages: [
+                "Opening the product page",
+                "Reading storefront response",
+                "Preparing content for inspection"
+            ]
+        ),
+        LoadingStep(
+            title: "Step 2",
+            messages: [
+                "Scanning metadata tags",
+                "Checking pricing and availability",
+                "Matching structured product fields"
+            ]
+        ),
+        LoadingStep(
+            title: "Step 3",
+            messages: [
+                "Calculating score signals",
+                "Weighing trust and confidence",
+                "Preparing your final result"
+            ]
+        )
     ]
 
     var body: some View {
@@ -34,30 +55,27 @@ struct AnalysisLoadingView: View {
                 }
 
                 VStack(spacing: 14) {
-                    ForEach(Array(analyzingMessages.enumerated()), id: \.offset) { index, message in
+                    ForEach(Array(loadingSteps.enumerated()), id: \.offset) { index, step in
                         VStack(spacing: 10) {
                             StepBlockView(
                                 number: index + 1,
-                                title: blockTitle(for: index),
-                                message: message,
+                                title: step.title,
+                                message: displayedMessage(for: index),
                                 isActive: index == animationStep,
                                 isComplete: index < animationStep,
                                 accentColor: accentColor
                             )
 
-                            if index < analyzingMessages.count - 1 {
+                            if index < loadingSteps.count - 1 {
                                 Image(systemName: "chevron.down")
                                     .font(.headline.weight(.semibold))
                                     .foregroundStyle(index == animationStep ? accentColor : Color(.systemGray3))
                                     .frame(height: 18)
+                                    .animation(.easeInOut(duration: 0.35), value: animationStep)
                             }
                         }
                     }
                 }
-
-                ProgressView(value: progressValue, total: 1)
-                    .tint(accentColor)
-                    .frame(maxWidth: .infinity)
             }
             .padding(24)
         }
@@ -67,39 +85,54 @@ struct AnalysisLoadingView: View {
         }
     }
 
-    private func blockTitle(for index: Int) -> String {
-        switch index {
-        case 0:
-            return "Step 1"
-        case 1:
-            return "Step 2"
-        default:
-            return "Step 3"
+    private func displayedMessage(for index: Int) -> String {
+        let step = loadingSteps[index]
+
+        if index < animationStep {
+            return step.messages.last ?? ""
         }
+
+        if index == animationStep {
+            return step.messages[activeDetailIndex]
+        }
+
+        return step.messages.first ?? ""
     }
 
     private func animateSteps() async {
-        let stepCount = Double(analyzingMessages.count)
+        let stepCount = Double(loadingSteps.count)
         let stepDuration = totalDuration / stepCount
 
-        await MainActor.run {
-            progressValue = 0
-            withAnimation(.linear(duration: totalDuration)) {
-                progressValue = 1
-            }
-        }
+        for step in loadingSteps.indices {
+            let detailMessages = loadingSteps[step].messages
+            let detailDuration = stepDuration / Double(detailMessages.count)
 
-        for step in analyzingMessages.indices {
             await MainActor.run {
                 withAnimation(.easeInOut(duration: 0.6)) {
                     animationStep = step
+                    activeDetailIndex = 0
                 }
             }
 
-            let nanoseconds = UInt64(stepDuration * 1_000_000_000)
-            try? await Task.sleep(nanoseconds: nanoseconds)
+            for detailIndex in detailMessages.indices {
+                if detailIndex > 0 {
+                    await MainActor.run {
+                        withAnimation(.easeInOut(duration: 0.45)) {
+                            activeDetailIndex = detailIndex
+                        }
+                    }
+                }
+
+                let nanoseconds = UInt64(detailDuration * 1_000_000_000)
+                try? await Task.sleep(nanoseconds: nanoseconds)
+            }
         }
     }
+}
+
+private struct LoadingStep {
+    let title: String
+    let messages: [String]
 }
 
 private struct StepBlockView: View {
@@ -132,9 +165,19 @@ private struct StepBlockView: View {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
 
-                Text(message)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.leading)
+                ZStack(alignment: .leading) {
+                    Text(message)
+                        .id(message)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .move(edge: .top).combined(with: .opacity)
+                        ))
+                }
+                .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+                .clipped()
+                .animation(.easeInOut(duration: 0.4), value: message)
             }
 
             Spacer()
