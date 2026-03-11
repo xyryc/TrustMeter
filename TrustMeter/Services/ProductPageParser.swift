@@ -10,7 +10,7 @@ import Foundation
 struct ProductPageParser {
     func parse(html: String, pageURL: URL) -> ProductData {
         let metadataHTML = limitedMetadataHTML(from: html)
-        let urlPrice = extractPriceFromURL(pageURL)
+        let urlPrice = extractBestPriceFromURL(pageURL)
         let inferredCurrency = inferredCurrency(for: pageURL)
 
         let title = extractTagContent(named: "title", in: metadataHTML)
@@ -312,13 +312,97 @@ struct ProductPageParser {
         return nil
     }
 
-    private func extractPriceFromURL(_ url: URL) -> Double? {
+    private func extractBestPriceFromURL(_ url: URL) -> Double? {
         guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
-              let priceValue = components.queryItems?.first(where: { $0.name == "price" })?.value else {
+              let queryItems = components.queryItems else {
             return nil
         }
 
-        return parsePrice(from: priceValue)
+        if let rawPrice = queryItems.first(where: { $0.name == "price" })?.value,
+           let strictParsed = parseStrictNumericPrice(rawPrice) {
+            return strictParsed
+        }
+
+        if let priceCompare = queryItems.first(where: { $0.name == "priceCompare" })?.value,
+           let parsedFromCompare = extractPriceFromPriceCompare(priceCompare) {
+            return parsedFromCompare
+        }
+
+        if let clickTrackInfo = queryItems.first(where: { $0.name == "clickTrackInfo" })?.value,
+           let parsedFromClickTrack = extractPriceFromClickTrackInfo(clickTrackInfo) {
+            return parsedFromClickTrack
+        }
+
+        return nil
+    }
+
+    private func parseStrictNumericPrice(_ rawValue: String) -> Double? {
+        let cleaned = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pattern = #"^\d+(?:[.,]\d{1,2})?$"#
+
+        guard cleaned.range(of: pattern, options: .regularExpression) != nil else {
+            return nil
+        }
+
+        return parsePrice(from: cleaned)
+    }
+
+    private func extractPriceFromPriceCompare(_ rawValue: String) -> Double? {
+        let decoded = repeatedlyRemovingPercentEncoding(rawValue)
+        let fields = decoded.components(separatedBy: ";")
+
+        let candidates = fields.compactMap { field -> Double? in
+            let parts = field.components(separatedBy: ":")
+            guard parts.count == 2 else { return nil }
+
+            let key = parts[0].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard key == "originprice" || key == "displayprice" else { return nil }
+
+            let rawAmount = parts[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let amount = parseStrictNumericPrice(rawAmount) else { return nil }
+            return normalizeMinorUnitPriceIfNeeded(amount)
+        }
+
+        return candidates.first
+    }
+
+    private func extractPriceFromClickTrackInfo(_ rawValue: String) -> Double? {
+        let decoded = repeatedlyRemovingPercentEncoding(rawValue)
+        let pattern = #"price\s*:\s*(\d+(?:\.\d+)?)"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else {
+            return nil
+        }
+
+        let range = NSRange(decoded.startIndex..., in: decoded)
+        guard let match = regex.firstMatch(in: decoded, options: [], range: range),
+              let amountRange = Range(match.range(at: 1), in: decoded) else {
+            return nil
+        }
+
+        return parseStrictNumericPrice(String(decoded[amountRange]))
+    }
+
+    private func repeatedlyRemovingPercentEncoding(_ rawValue: String) -> String {
+        var current = rawValue
+
+        for _ in 0..<3 {
+            guard let decoded = current.removingPercentEncoding, decoded != current else {
+                break
+            }
+
+            current = decoded
+        }
+
+        return current
+    }
+
+    private func normalizeMinorUnitPriceIfNeeded(_ value: Double) -> Double {
+        if value >= 1_000_000, value.truncatingRemainder(dividingBy: 100) == 0 {
+            return value / 100
+        }
+
+        return value
     }
 
     private func inferredCurrency(for url: URL) -> String? {
