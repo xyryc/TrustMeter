@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 struct AnalyzerView: View {
     @StateObject private var viewModel = AnalyzerViewModel()
@@ -158,21 +159,33 @@ private struct InputCardView: View {
                     .foregroundStyle(.secondary)
             }
 
-            TextField("http://example.com/product", text: $productURLText)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled(true)
-                .keyboardType(.URL)
-                .submitLabel(.go)
-                .focused($isURLFieldFocused)
-                .disabled(isAnalyzing)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 16)
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(actionColor.opacity(0.16), lineWidth: 1)
+            HStack(spacing: 12) {
+                TextField("http://example.com/product", text: $productURLText)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled(true)
+                    .keyboardType(.URL)
+                    .submitLabel(.go)
+                    .focused($isURLFieldFocused)
+                    .disabled(isAnalyzing)
+                    .onSubmit(onSubmit)
+
+                Button(action: trailingButtonAction) {
+                    Image(systemName: trimmedURL.isEmpty ? "doc.on.clipboard" : "xmark.circle.fill")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(actionColor)
+                        .frame(width: 34, height: 34)
+                        .background(actionColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
-                .onSubmit(onSubmit)
+                .buttonStyle(.plain)
+                .disabled(isAnalyzing)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(actionColor.opacity(0.16), lineWidth: 1)
+            }
 
             Button(action: onSubmit) {
                 HStack {
@@ -203,6 +216,21 @@ private struct InputCardView: View {
         .overlay {
             RoundedRectangle(cornerRadius: 28, style: .continuous)
                 .stroke(actionColor.opacity(0.12), lineWidth: 1)
+        }
+    }
+
+    private func pasteURL() {
+        if let pastedText = UIPasteboard.general.string {
+            productURLText = pastedText
+            isURLFieldFocused = true
+        }
+    }
+
+    private func trailingButtonAction() {
+        if trimmedURL.isEmpty {
+            pasteURL()
+        } else {
+            productURLText = ""
         }
     }
 }
