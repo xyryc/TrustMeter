@@ -8,7 +8,9 @@
 import SwiftUI
 
 struct AnalysisLoadingView: View {
+    let totalDuration: Double
     @State private var animationStep = 0
+    @State private var progressValue = 0.0
     private let accentColor = Color(hex: "71C9CE")
 
     private let analyzingMessages = [
@@ -22,36 +24,38 @@ struct AnalysisLoadingView: View {
             Color(.systemBackground)
                 .ignoresSafeArea()
 
-            VStack(spacing: 24) {
-                VStack(spacing: 12) {
-                    scanningIndicator
-
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text("Analyzing Product")
                         .font(.title2.bold())
 
-                    Text(analyzingMessages[animationStep])
+                    Text("Each step completes one by one before moving to the next.")
                         .foregroundStyle(.secondary)
                 }
 
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(spacing: 14) {
                     ForEach(Array(analyzingMessages.enumerated()), id: \.offset) { index, message in
-                        analyzingStepRow(
-                            number: index + 1,
-                            message: message,
-                            isActive: index == animationStep,
-                            isComplete: index < animationStep
-                        )
+                        VStack(spacing: 10) {
+                            StepBlockView(
+                                number: index + 1,
+                                title: blockTitle(for: index),
+                                message: message,
+                                isActive: index == animationStep,
+                                isComplete: index < animationStep,
+                                accentColor: accentColor
+                            )
+
+                            if index < analyzingMessages.count - 1 {
+                                Image(systemName: "chevron.down")
+                                    .font(.headline.weight(.semibold))
+                                    .foregroundStyle(index == animationStep ? accentColor : Color(.systemGray3))
+                                    .frame(height: 18)
+                            }
+                        }
                     }
                 }
-                .padding(20)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color(.separator), lineWidth: 0.5)
-                }
 
-                ProgressView(value: Double(animationStep + 1), total: Double(analyzingMessages.count))
+                ProgressView(value: progressValue, total: 1)
                     .tint(accentColor)
                     .frame(maxWidth: .infinity)
             }
@@ -63,72 +67,97 @@ struct AnalysisLoadingView: View {
         }
     }
 
-    private var scanningIndicator: some View {
-        ZStack {
-            Circle()
-                .stroke(accentColor.opacity(0.22), lineWidth: 12)
-                .frame(width: 88, height: 88)
-
-            Circle()
-                .trim(from: 0.15, to: 0.85)
-                .stroke(accentColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                .frame(width: 88, height: 88)
-                .rotationEffect(.degrees(Double(animationStep) * 120))
-                .animation(.easeInOut(duration: 0.45), value: animationStep)
-
-            Image(systemName: "viewfinder")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(accentColor)
+    private func blockTitle(for index: Int) -> String {
+        switch index {
+        case 0:
+            return "Step 1"
+        case 1:
+            return "Step 2"
+        default:
+            return "Step 3"
         }
     }
 
-    private func analyzingStepRow(
-        number: Int,
-        message: String,
-        isActive: Bool,
-        isComplete: Bool
-    ) -> some View {
-        HStack(spacing: 12) {
+    private func animateSteps() async {
+        let stepCount = Double(analyzingMessages.count)
+        let stepDuration = totalDuration / stepCount
+
+        await MainActor.run {
+            progressValue = 0
+            withAnimation(.linear(duration: totalDuration)) {
+                progressValue = 1
+            }
+        }
+
+        for step in analyzingMessages.indices {
+            await MainActor.run {
+                withAnimation(.easeInOut(duration: 0.6)) {
+                    animationStep = step
+                }
+            }
+
+            let nanoseconds = UInt64(stepDuration * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: nanoseconds)
+        }
+    }
+}
+
+private struct StepBlockView: View {
+    let number: Int
+    let title: String
+    let message: String
+    let isActive: Bool
+    let isComplete: Bool
+    let accentColor: Color
+
+    var body: some View {
+        HStack(spacing: 14) {
             ZStack {
-                Circle()
-                    .fill(stepFillColor(isActive: isActive, isComplete: isComplete))
-                    .frame(width: 34, height: 34)
-                    .overlay {
-                        Circle()
-                            .stroke(stepBorderColor(isActive: isActive, isComplete: isComplete), lineWidth: 1)
-                    }
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(badgeFillColor)
+                    .frame(width: 46, height: 46)
 
                 if isComplete {
                     Image(systemName: "checkmark")
-                        .font(.footnote.weight(.bold))
+                        .font(.subheadline.weight(.bold))
                         .foregroundStyle(.white)
                 } else {
                     Text("\(number)")
-                        .font(.footnote.weight(.semibold))
+                        .font(.headline.weight(.semibold))
                         .foregroundStyle(isActive ? .white : .primary)
                 }
             }
-            .scaleEffect(isActive ? 1.08 : 1)
-            .animation(.easeInOut(duration: 0.35), value: isActive)
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Step \(number)")
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
                     .font(.subheadline.weight(.semibold))
 
                 Text(message)
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
             }
 
             Spacer()
 
             if isActive {
                 ProgressView()
+                    .tint(accentColor)
                     .controlSize(.small)
             }
         }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(blockBackgroundColor, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(blockBorderColor, lineWidth: isActive ? 1.5 : 0.5)
+        }
+        .scaleEffect(isActive ? 1 : 0.98)
+        .animation(.easeInOut(duration: 0.35), value: isActive)
+        .animation(.easeInOut(duration: 0.35), value: isComplete)
     }
 
-    private func stepFillColor(isActive: Bool, isComplete: Bool) -> Color {
+    private var badgeFillColor: Color {
         if isComplete || isActive {
             return accentColor
         }
@@ -136,25 +165,30 @@ struct AnalysisLoadingView: View {
         return Color(.systemGray5)
     }
 
-    private func stepBorderColor(isActive: Bool, isComplete: Bool) -> Color {
-        if isComplete || isActive {
-            return accentColor
+    private var blockBackgroundColor: Color {
+        if isActive {
+            return accentColor.opacity(0.10)
         }
 
-        return Color(.systemGray4)
+        if isComplete {
+            return accentColor.opacity(0.06)
+        }
+
+        return Color(.secondarySystemBackground)
     }
 
-    private func animateSteps() async {
-        for step in analyzingMessages.indices {
-            animationStep = step
-            try? await Task.sleep(for: .milliseconds(1100))
+    private var blockBorderColor: Color {
+        if isActive || isComplete {
+            return accentColor.opacity(0.35)
         }
+
+        return Color(.separator)
     }
 }
 
 struct AnalysisLoadingView_Previews: PreviewProvider {
     static var previews: some View {
-        AnalysisLoadingView()
+        AnalysisLoadingView(totalDuration: 12)
     }
 }
 

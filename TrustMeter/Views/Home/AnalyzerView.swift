@@ -9,6 +9,7 @@ import SwiftUI
 import UIKit
 
 struct AnalyzerView: View {
+    private let scanDuration = 12.0
     @StateObject private var viewModel = AnalyzerViewModel()
     @EnvironmentObject private var historyStore: HistoryStore
     @AppStorage("saveHistoryEnabled") private var saveHistoryEnabled = true
@@ -48,7 +49,7 @@ struct AnalyzerView: View {
             }
         }
         .fullScreenCover(isPresented: $showAnalyzingScreen) {
-            AnalysisLoadingView()
+            AnalysisLoadingView(totalDuration: scanDuration)
         }
         .alert("Analysis Failed", isPresented: errorAlertBinding) {
             Button("OK") {
@@ -100,7 +101,7 @@ struct AnalyzerView: View {
         Task {
             await viewModel.analyze(
                 urlText: trimmedURL,
-                minimumDuration: .seconds(10)
+                minimumDuration: .milliseconds(Int(scanDuration * 1000))
             )
         }
     }
