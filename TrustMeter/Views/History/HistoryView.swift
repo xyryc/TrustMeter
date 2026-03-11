@@ -19,13 +19,6 @@ struct HistoryView: View {
             }
         }
         .navigationTitle("History")
-        .toolbar {
-            if !historyStore.items.isEmpty {
-                Button("Clear") {
-                    historyStore.removeAll()
-                }
-            }
-        }
     }
 
     private var emptyState: some View {

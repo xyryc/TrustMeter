@@ -22,25 +22,31 @@ final class HistoryStore: ObservableObject {
     }
 
     func add(_ result: AnalysisResult) {
-        items.removeAll { $0.id == result.id }
-        items.insert(result, at: 0)
+        var updatedItems = items
+        updatedItems.removeAll { $0.id == result.id }
+        updatedItems.insert(result, at: 0)
 
-        if items.count > maxItemCount {
-            items = Array(items.prefix(maxItemCount))
+        if updatedItems.count > maxItemCount {
+            updatedItems = Array(updatedItems.prefix(maxItemCount))
         }
 
+        items = updatedItems
         save()
     }
 
     func delete(at offsets: IndexSet) {
+        var updatedItems = items
+
         for offset in offsets.sorted(by: >) {
-            items.remove(at: offset)
+            updatedItems.remove(at: offset)
         }
+
+        items = updatedItems
         save()
     }
 
     func removeAll() {
-        items.removeAll()
+        items = []
         save()
     }
 
