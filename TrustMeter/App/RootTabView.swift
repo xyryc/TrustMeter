@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct RootTabView: View {
-    @AppStorage("prefersDarkTheme") private var prefersDarkTheme = false
+    @AppStorage("appThemeMode") private var appThemeMode = AppThemeMode.system.rawValue
 
     var body: some View {
         TabView {
@@ -33,7 +33,11 @@ struct RootTabView: View {
                 Label("Settings", systemImage: "gearshape")
             }
         }
-        .preferredColorScheme(prefersDarkTheme ? .dark : .light)
+        .preferredColorScheme(selectedTheme.preferredColorScheme)
+    }
+
+    private var selectedTheme: AppThemeMode {
+        AppThemeMode(rawValue: appThemeMode) ?? .system
     }
 }
 

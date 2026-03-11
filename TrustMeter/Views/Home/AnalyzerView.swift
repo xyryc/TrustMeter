@@ -10,6 +10,7 @@ import SwiftUI
 struct AnalyzerView: View {
     @StateObject private var viewModel = AnalyzerViewModel()
     @EnvironmentObject private var historyStore: HistoryStore
+    @AppStorage("saveHistoryEnabled") private var saveHistoryEnabled = true
     @State private var productURLText = ""
     @State private var showResult = false
     @State private var showAnalyzingScreen = false
@@ -57,7 +58,9 @@ struct AnalyzerView: View {
         }
         .onReceive(viewModel.$latestResult) { result in
             if let result {
-                historyStore.add(result)
+                if saveHistoryEnabled {
+                    historyStore.add(result)
+                }
                 showAnalyzingScreen = false
                 showResult = true
             }

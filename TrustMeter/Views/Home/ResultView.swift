@@ -8,6 +8,7 @@
 import SwiftUI
 
 struct ResultView: View {
+    @AppStorage("showExtractionSources") private var showExtractionSources = true
     let result: AnalysisResult
     @State private var isDescriptionExpanded = false
 
@@ -120,14 +121,21 @@ struct ResultView: View {
                 )
             }
 
-            HStack(spacing: 12) {
-                MetaPill(title: "Store", value: storeName)
-                MetaPill(title: "Price Source", value: sourceLabel(result.productData.sources.price))
-            }
+            if showExtractionSources {
+                HStack(spacing: 12) {
+                    MetaPill(title: "Store", value: storeName)
+                    MetaPill(title: "Price Source", value: sourceLabel(result.productData.sources.price))
+                }
 
-            HStack(spacing: 12) {
-                MetaPill(title: "Title Source", value: sourceLabel(result.productData.sources.title))
-                MetaPill(title: "Checked", value: result.analyzedAt.formatted(date: .abbreviated, time: .shortened))
+                HStack(spacing: 12) {
+                    MetaPill(title: "Title Source", value: sourceLabel(result.productData.sources.title))
+                    MetaPill(title: "Checked", value: result.analyzedAt.formatted(date: .abbreviated, time: .shortened))
+                }
+            } else {
+                HStack(spacing: 12) {
+                    MetaPill(title: "Store", value: storeName)
+                    MetaPill(title: "Checked", value: result.analyzedAt.formatted(date: .abbreviated, time: .shortened))
+                }
             }
         }
         .cardStyle()
